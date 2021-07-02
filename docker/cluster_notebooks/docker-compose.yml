@@ -1,0 +1,82 @@
+version: '3'
+services:
+  spark-master:
+    image: bde2020/spark-master:3.1.1-hadoop3.2
+    container_name: spark-master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+      - "4040:4040"
+    volumes:
+      - spark_data:/opt/spark/data
+    environment:
+      - INIT_DAEMON_STEP=setup_spark
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+  spark-worker-1:
+    image: bde2020/spark-worker:3.1.1-hadoop3.2
+    container_name: spark-worker-1
+    depends_on:
+      - spark-master
+    ports:
+      - "8081:8081"
+    volumes:
+      - spark_data:/data
+    environment:
+      - "SPARK_MASTER=spark://spark-master:7077"
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 5G
+  spark-worker-2:
+    image: bde2020/spark-worker:3.1.1-hadoop3.2
+    container_name: spark-worker-2
+    depends_on:
+      - spark-master
+    ports:
+      - "8082:8081"
+    volumes:
+      - spark_data:/opt/spark/data
+    environment:
+      - "SPARK_MASTER=spark://spark-master:7077"
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 5G
+  spark-worker-3:
+    image: bde2020/spark-worker:3.1.1-hadoop3.2
+    container_name: spark-worker-3
+    depends_on:
+      - spark-master
+    volumes:
+      - spark_data:/opt/spark/data
+    ports:
+      - "8083:8081"
+    environment:
+      - "SPARK_MASTER=spark://spark-master:7077"
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 5G
+  all-spark-notebook:
+    image: jupyter/all-spark-notebook
+    container_name: all-spark-notebook
+    volumes:
+      - /opt/spark/conf:/conf
+      - /opt/spark/:/home/jovyan/work
+    ports:
+      - "8888:8888"
+      - "4050-4059:4040-4049"
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - GRANT_SUDO=yes
+      - JUPYTER_ENABLE_LAB=1
+    command: "start-notebook.sh --NotebookApp.token=''"
+volumes:
+    spark_data:
